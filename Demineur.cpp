@@ -17,7 +17,7 @@ struct Grid
     int sizeY;
 };
 
-Grid CreateGrid(int sizeX, int sizeY)
+Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
 {
     Square** grid = (Square**)malloc(sizeY * sizeof(Square*));
     for (int i = 0; i < sizeY; i++)
@@ -26,17 +26,16 @@ Grid CreateGrid(int sizeX, int sizeY)
     }
 
     int maxMine = ((sizeX * sizeY) * 15) / 100;
-    int mineCount = 0;
 
     for (int j = 0; j < sizeY; j++)
     {
         for (int i = 0; i < sizeX; i++)
         {
             int randomNum = rand() % 100;
-            if (randomNum <= 15 && mineCount < maxMine)
+            if (randomNum <= 15 && *mineCount < maxMine)
             {
-                grid[j][i] = { i, j, true, false, false, 'X' };
-                mineCount++;
+                grid[j][i] = { i, j, true, false, false, ' ' };
+                *mineCount = *mineCount + 1;
             }
             else
             {
@@ -163,14 +162,32 @@ int getDifficulty()
     return difficulty - 1;
 }
 
+int* getPlayerSquare()
+{
+    std::cout << "Please select a line : ";
+    int line;
+    std::cin >> line;
+    std::cout << "Please select a column : ";
+    int column;
+    std::cin >> column;
+    int coord[2] = { line, column };
+
+    return coord;
+}
+
 int main()
 {
     srand(time(NULL));
 
-    int difficultySizes[3][2] = { {9, 9}, {16, 16}, {32, 16} };
-    Grid grid = CreateGrid(30, 16);
-    DisplayGrid(30, 16, &grid);
-    RevealSquare(&grid, &grid.array[5][5]);
-    DisplayGrid(30, 16, &grid);
+    int difficultySizes[3][2] = { {9, 9}, {16, 16}, {30, 16} };
+    
+    int difficulty = getDifficulty();
+
+    int mineCount = 0;
+    Grid grid = CreateGrid(difficultySizes[difficulty][0], difficultySizes[difficulty][1], &mineCount);
+    std::cout << mineCount << std::endl;
+    DisplayGrid(difficultySizes[difficulty][0], difficultySizes[difficulty][1], &grid);
+
+
 }
 
