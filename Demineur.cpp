@@ -141,6 +141,20 @@ bool RevealSquare(Grid* grid, Square* square)
     return true;
 }
 
+void SafeStart(Grid* grid, Square* square)
+{
+    for (int j = square->y - 1; j <= square->y + 1; j++)
+    {
+        for (int i = square->x - 1; i <= square->x + 1; i++)
+        {
+            if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY)
+            {
+                grid->array[j][i].isMine = false;
+            }
+        }
+    }
+}
+
 int getDifficulty()
 {
     std::cout << "You may choose your difficulty (1: EASY, 2: MEDIUM, 3: HARD) : ";
