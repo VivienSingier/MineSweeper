@@ -73,12 +73,12 @@ Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
             int randomNum = rand() % 100;
             if (randomNum <= 20 && *mineCount < maxMine)
             {
-                grid[j][i] = { i, j, true, false, false, 'O', RED };
+                grid[j][i] = { i, j, true, false, false, 'X', CYAN };
                 *mineCount = *mineCount + 1;
             }
             else
             {
-                grid[j][i] = { i, j, false, false, false, 'X', WHITE };
+                grid[j][i] = { i, j, false, false, false, 'X', CYAN };
             }
         }
     }
@@ -264,33 +264,30 @@ int main()
     while (wantsToPlayAgain)
     {
         int difficulty = getPlayerInputInt("You may choose a difficulty (1 : EASY, 2 : MEDIUM, 3 : HARD) : ", 1, 3) - 1;
-        int columnCount = difficultySizes[difficulty][1];
-        int lineCount = difficultySizes[difficulty][0];
+        int lineCount = difficultySizes[difficulty][1];
+        int columnCount = difficultySizes[difficulty][0];
 
         int mineCount = 0;
-        Grid grid = CreateGrid(lineCount, columnCount, &mineCount);
+        Grid grid = CreateGrid(columnCount, lineCount, &mineCount);
         std::cout << mineCount << std::endl;
-        DisplayGrid(lineCount, columnCount, &grid);
+        DisplayGrid(columnCount, lineCount, &grid);
 
-        int emptyCellCount = columnCount * lineCount - mineCount;
+        int emptyCellCount = lineCount * columnCount - mineCount;
         int* pEmptyCellCount = &emptyCellCount;
         bool isGameOver = false;
 
-        int column = getPlayerInputInt("Please choose a column : ", 0, columnCount);
-        int line = getPlayerInputInt("Please choose a line : ", 0, lineCount);
+        int column = getPlayerInputInt("Please choose a column : ", 0, columnCount - 1);
+        int line = getPlayerInputInt("Please choose a line : ", 0, lineCount - 1);
         char action = getPlayerInputLettre("Do you want to reveal this cell or add a flag ? (R : reveal, F : flag) : ", 'R', 'F');
 
         SafeStart(&grid, &grid.array[line][column], pEmptyCellCount);
         RevealSquare(&grid, &grid.array[line][column], pEmptyCellCount);
-        DisplayGrid(lineCount, columnCount, &grid);
+        DisplayGrid(columnCount, lineCount, &grid);
 
         while (emptyCellCount != 0 && !isGameOver)
         {
-
-            std::cout << emptyCellCount << std::endl;
-
-            int column = getPlayerInputInt("Please choose a column : ", 0, columnCount);
-            int line = getPlayerInputInt("Please choose a line : ", 0, lineCount);
+            int column = getPlayerInputInt("Please choose a column : ", 0, lineCount - 1);
+            int line = getPlayerInputInt("Please choose a line : ", 0, columnCount - 1);
             char action = getPlayerInputLettre("Do you want to reveal this cell or add a flag ? (R : reveal, F : flag) : ", 'R', 'F');
 
             if (action == 'R' || action == 'r')
@@ -308,7 +305,7 @@ int main()
             {
                 MarkSquare(&grid.array[line][column]);
             }
-            DisplayGrid(lineCount, columnCount, &grid);
+            DisplayGrid(columnCount, lineCount, &grid);
         }
 
         if (isGameOver)
@@ -320,7 +317,7 @@ int main()
             std::cout << "CONGRATULATION, YOU WON !!" << std::endl;
         }
 
-        char retry = getPlayerInputLettre("Would you like to play again ? (Y : yes, N : no)", 'Y', 'N');
+        char retry = getPlayerInputLettre("Would you like to play again ? (Y : yes, N : no) : ", 'Y', 'N');
         if (retry == 'N' || retry == 'n')
         {
             wantsToPlayAgain = false;
