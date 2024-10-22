@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <ctime>
 
 #define BLACK "\033[30m"
 #define RED "\033[31m"
@@ -73,12 +74,12 @@ Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
             int randomNum = rand() % 100;
             if (randomNum <= 20 && *mineCount < maxMine)
             {
-                grid[j][i] = { i, j, true, false, false, 'X', CYAN };
+                grid[j][i] = { i, j, true, false, false, 'X', CYAN }; 
                 *mineCount = *mineCount + 1;
             }
             else
             {
-                grid[j][i] = { i, j, false, false, false, 'X', CYAN };
+                grid[j][i] = { i, j, false, false, false, 'X', CYAN }; 
             }
         }
     }
@@ -234,6 +235,31 @@ bool IsMine(Square* square)
     return false;
 }
 
+void RevealAllMines(Grid* grid)
+{
+    int count = 0;
+    for (int j = 0; j < grid->sizeY; j++)
+    {
+        for (int i = 0; i < grid->sizeX; i++)
+        {
+            while (count < 100)
+            {
+                count++;
+            }
+            if (grid->array[j][i].isMine && count == 100)
+            {
+                grid->array[j][i].display = 'O';
+                grid->array[j][i].color = RED;
+                grid->array[j][i].isRevealed = true;
+
+                count = 0;
+
+                DisplayGrid(grid->sizeX, grid->sizeY, grid);
+            }
+        }
+    }
+}
+
 void SafeStart(Grid* grid, Square* square, int* ptr)
 {
     for (int j = square->y - 1; j <= square->y + 1; j++)
@@ -286,8 +312,8 @@ int main()
 
         while (emptyCellCount != 0 && !isGameOver)
         {
-            int column = getPlayerInputInt("Please choose a column : ", 0, lineCount - 1);
-            int line = getPlayerInputInt("Please choose a line : ", 0, columnCount - 1);
+            int column = getPlayerInputInt("Please choose a column : ", 0, columnCount - 1);
+            int line = getPlayerInputInt("Please choose a line : ", 0, lineCount - 1);
             char action = getPlayerInputLettre("Do you want to reveal this cell or add a flag ? (R : reveal, F : flag) : ", 'R', 'F');
 
             if (action == 'R' || action == 'r')
@@ -304,6 +330,10 @@ int main()
             else
             {
                 MarkSquare(&grid.array[line][column]);
+            }
+            if (isGameOver)
+            {
+                RevealAllMines(&grid);
             }
             DisplayGrid(columnCount, lineCount, &grid);
         }
