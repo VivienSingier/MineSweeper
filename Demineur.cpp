@@ -65,14 +65,14 @@ Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
         grid[i] = (Square*)malloc(sizeX * sizeof(Square));
     }
 
-    int maxMine = ((sizeX * sizeY) * 20) / 100;
+    int maxMine = ((sizeX * sizeY) * 16) / 100;
 
     for (int j = 0; j < sizeY; j++)
     {
         for (int i = 0; i < sizeX; i++)
         {
             int randomNum = rand() % 100;
-            if (randomNum <= 20 && *mineCount < maxMine)
+            if (randomNum <= 16 && *mineCount < maxMine)
             {
                 grid[j][i] = { i, j, true, false, false, 'X', CYAN }; 
                 *mineCount = *mineCount + 1;
@@ -235,18 +235,22 @@ bool IsMine(Square* square)
     return false;
 }
 
-void RevealAllMines(Grid* grid)
+void RevealAllMines(Grid* grid, Square* square)
 {
+    square->display = 'O';
+    square->color = RED;
+    square->isRevealed = true;
+
     int count = 0;
     for (int j = 0; j < grid->sizeY; j++)
     {
         for (int i = 0; i < grid->sizeX; i++)
         {
-            while (count < 100)
+            while (count < 100000)
             {
                 count++;
             }
-            if (grid->array[j][i].isMine && count == 100)
+            if (grid->array[j][i].isMine && !grid->array[j][i].isRevealed && count == 100000)
             {
                 grid->array[j][i].display = 'O';
                 grid->array[j][i].color = RED;
@@ -333,7 +337,7 @@ int main()
             }
             if (isGameOver)
             {
-                RevealAllMines(&grid);
+                RevealAllMines(&grid, &grid.array[line][column]);
             }
             DisplayGrid(columnCount, lineCount, &grid);
         }
