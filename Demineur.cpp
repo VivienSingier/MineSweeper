@@ -2,15 +2,16 @@
 #include <cstdlib>
 #include <ctime>
 #include <conio.h>
+#include <windows.h>
 
-#define BLACK "\033[30m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define YELLOW "\033[33m"
-#define BLUE "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN "\033[36m"
-#define WHITE "\033[37m"
+#define BLACK 0
+#define RED 4
+#define GREEN 2
+#define YELLOW 14
+#define BLUE 1
+#define MAGENTA 5
+#define CYAN 3
+#define WHITE 15
 
 struct Square {
     int x;
@@ -19,7 +20,8 @@ struct Square {
     bool isRevealed;
     bool isMarked;
     char display;
-    const char* color;
+    int color;
+    bool isHighlighted;
 };
 
 struct Grid
@@ -31,6 +33,7 @@ struct Grid
 
 char getPlayerInputLettre(const char* str, const char c1, const char c2)
 {
+    //Problème avec plusieur char rentré en même temps
     char input;
     std::cout << str;
     std::cin >> input;
@@ -75,17 +78,29 @@ Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
             int randomNum = rand() % 100;
             if (randomNum <= 16 && *mineCount < maxMine)
             {
-                grid[j][i] = { i, j, true, false, false, 'X', CYAN }; 
+                grid[j][i] = { i, j, true, false, false, 'X', CYAN, false }; 
                 *mineCount = *mineCount + 1;
             }
             else
             {
-                grid[j][i] = { i, j, false, false, false, 'X', CYAN }; 
+                grid[j][i] = { i, j, false, false, false, 'X', CYAN, false }; 
             }
         }
     }
 
     return { grid, sizeX, sizeY };
+}
+
+void SetColor(int color, int bgColor)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole,(bgColor << 4) | color);
+}
+
+void ResetColor()
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, (0 << 4) | 7);
 }
 
 void DisplayLine(int sizeX)
@@ -122,30 +137,39 @@ void DisplayGrid(int sizeX, int sizeY, Grid* grid)
 
         for (int j = 0; j < sizeX; j++)
         {
-            std::cout << "| " << grid->array[i][j].color << grid->array[i][j].display << WHITE << " ";
+            std::cout << "| ";
+            if (!grid->array[i][j].isHighlighted)
+            {
+                SetColor(grid->array[i][j].color, BLACK);
+                std::cout << grid->array[i][j].display;
+                ResetColor();
+            }
+            else
+            {
+                SetColor(BLACK, grid->array[i][j].color);
+                std::cout << grid->array[i][j].display;
+                ResetColor();
+            }
+            std::cout << " ";
         }
         std::cout << "|" << std::endl;
         DisplayLine(sizeX);
     }
 }
 
-int GetAdjacentMinesCount(Grid* grid, Square* square)
+void HighlightCursor(Grid* grid, int line, int column)
 {
-    int count = 0;
-    for (int j = square->y - 1; j <= square->y + 1; j++)
-    {
-        for (int i = square->x - 1; i <= square->x + 1; i++)
-        {
-            if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY)
-            {
-                if (grid->array[j][i].isMine)
-                {
-                    count++;
-                }
-            }
-        }
-    }
-    switch (count)
+    grid->array[line][column].isHighlighted = true;
+}
+
+void removeHighlight(Grid* grid, int line, int column)
+{
+    grid->array[line][column].isHighlighted = false;
+}
+
+void ChooseColor(Square* square, int adjacentMinesCount)
+{
+    switch (adjacentMinesCount)
     {
     case 1:
         square->color = GREEN;
@@ -166,8 +190,27 @@ int GetAdjacentMinesCount(Grid* grid, Square* square)
         square->color = BLUE;
         break;
     }
+}
 
-    
+int GetAdjacentMinesCount(Grid* grid, Square* square)
+{
+    int count = 0;
+    for (int j = square->y - 1; j <= square->y + 1; j++)
+    {
+        for (int i = square->x - 1; i <= square->x + 1; i++)
+        {
+            if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY)
+            {
+                if (grid->array[j][i].isMine)
+                {
+                    count++;
+                }
+            }
+        }
+    }    
+
+    ChooseColor(square, count);
+
     return count;
 }
 
@@ -265,7 +308,7 @@ void RevealAllMines(Grid* grid, Square* square)
     }
 }
 
-void SafeStart(Grid* grid, Square* square, int* ptr)
+void SafeStart(Grid* grid, Square* square, int* emptyCellCount)
 {
     for (int j = square->y - 1; j <= square->y + 1; j++)
     {
@@ -275,7 +318,7 @@ void SafeStart(Grid* grid, Square* square, int* ptr)
             {
                 if (grid->array[j][i].isMine)
                 {
-                    *ptr = *ptr + 1;
+                    *emptyCellCount = *emptyCellCount + 1;
                 }
                 grid->array[j][i].isMine = false;
                 grid->array[j][i].color = WHITE;
@@ -284,7 +327,7 @@ void SafeStart(Grid* grid, Square* square, int* ptr)
     }
 }
 
-void getChInput()
+void playerActions(Grid* grid, int* tryCount, int* line, int* column, int* emptyCellCount, bool* isGameOver)
 {
     char ch[3] = { 0, 0 };
 
@@ -298,19 +341,39 @@ void getChInput()
         {
         case 72:
             // UP
-            std::cout << "UP" << std::endl;
+            if (*line > 0)
+            {
+                removeHighlight(grid, *line, *column);
+                *line = *line - 1;
+                HighlightCursor(grid, *line, *column);
+            }
             break;
         case 80:
             // DOWN
-            std::cout << "DOWN" << std::endl;
+            if (*line < grid->sizeY-1)
+            {
+                removeHighlight(grid, *line, *column);
+                *line = *line + 1;
+                HighlightCursor(grid, *line, *column);
+            }
             break;
         case 77:
             // RIGHT
-            std::cout << "RIGHT" << std::endl;
+            if (*column < grid->sizeX - 1)
+            {
+                removeHighlight(grid, *line, *column);
+                *column = *column + 1;
+                HighlightCursor(grid, *line, *column);
+            }
             break;
         case 75:
             // LEFT
-            std::cout << "LEFT" << std::endl;
+            if (*column > 0)
+            {
+                removeHighlight(grid, *line, *column);
+                *column = *column - 1;
+                HighlightCursor(grid, *line, *column);
+            }
             break;
         }
     }
@@ -321,96 +384,88 @@ void getChInput()
         case 114:
         case 82:
             // R
-            std::cout << "R" << std::endl;
+            if (*tryCount == 0)
+            {
+                SafeStart(grid, &grid->array[*line][*column], emptyCellCount);
+                RevealSquare(grid, &grid->array[*line][*column], emptyCellCount);
+            }
+            else
+            {
+                if (!grid->array[*line][*column].isMine)
+                {
+                    RevealSquare(grid, &grid->array[*line][*column], emptyCellCount);
+                }
+                else
+                {
+                    *isGameOver = true;
+                }
+            }
+            *tryCount = *tryCount + 1;
             break;
         case 102:
         case 70:
             // F
-            std::cout << "F" << std::endl;
+            MarkSquare(&grid->array[*line][*column]);
             break;
         }
     }
+    DisplayGrid(grid->sizeX, grid->sizeY, grid);
 }
 
 int main()
 {
     srand(time(NULL));
 
-    //int difficultySizes[3][2] = { {9, 9}, {16, 16}, {30, 16} };
+    int difficultySizes[3][2] = { {9, 9}, {16, 16}, {30, 16} };
 
-    //bool wantsToPlayAgain = true;
+    bool wantsToPlayAgain = true;
 
-    //while (wantsToPlayAgain)
-    //{
-    //    int difficulty = getPlayerInputInt("You may choose a difficulty (1 : EASY, 2 : MEDIUM, 3 : HARD) : ", 1, 3) - 1;
-    //    int lineCount = difficultySizes[difficulty][1];
-    //    int columnCount = difficultySizes[difficulty][0];
-
-    //    int mineCount = 0;
-    //    Grid grid = CreateGrid(columnCount, lineCount, &mineCount);
-    //    std::cout << mineCount << std::endl;
-    //    DisplayGrid(columnCount, lineCount, &grid);
-
-    //    int emptyCellCount = lineCount * columnCount - mineCount;
-    //    int* pEmptyCellCount = &emptyCellCount;
-    //    bool isGameOver = false;
-
-    //    int column = getPlayerInputInt("Please choose a column : ", 0, columnCount - 1);
-    //    int line = getPlayerInputInt("Please choose a line : ", 0, lineCount - 1);
-    //    char action = getPlayerInputLettre("Do you want to reveal this cell or add a flag ? (R : reveal, F : flag) : ", 'R', 'F');
-
-    //    SafeStart(&grid, &grid.array[line][column], pEmptyCellCount);
-    //    RevealSquare(&grid, &grid.array[line][column], pEmptyCellCount);
-    //    DisplayGrid(columnCount, lineCount, &grid);
-
-    //    while (emptyCellCount != 0 && !isGameOver)
-    //    {
-    //        int column = getPlayerInputInt("Please choose a column : ", 0, columnCount - 1);
-    //        int line = getPlayerInputInt("Please choose a line : ", 0, lineCount - 1);
-    //        char action = getPlayerInputLettre("Do you want to reveal this cell or add a flag ? (R : reveal, F : flag) : ", 'R', 'F');
-
-    //        if (action == 'R' || action == 'r')
-    //        {
-    //            if (!IsMine(&grid.array[line][column]))
-    //            {
-    //                RevealSquare(&grid, &grid.array[line][column], pEmptyCellCount);
-    //            }
-    //            else
-    //            {
-    //                isGameOver = true;
-    //            }
-    //        }
-    //        else
-    //        {
-    //            MarkSquare(&grid.array[line][column]);
-    //        }
-    //        if (isGameOver)
-    //        {
-    //            RevealAllMines(&grid, &grid.array[line][column]);
-    //        }
-    //        DisplayGrid(columnCount, lineCount, &grid);
-    //    }
-
-    //    if (isGameOver)
-    //    {
-    //        std::cout << "GAME OVER" << std::endl;
-    //    }
-    //    else
-    //    {
-    //        std::cout << "CONGRATULATION, YOU WON !!" << std::endl;
-    //    }
-
-    //    char retry = getPlayerInputLettre("Would you like to play again ? (Y : yes, N : no) : ", 'Y', 'N');
-    //    if (retry == 'N' || retry == 'n')
-    //    {
-    //        wantsToPlayAgain = false;
-    //    }
-
-    //}
-
-    while (true)
+    while (wantsToPlayAgain)
     {
-        getChInput();
+        int difficulty = getPlayerInputInt("You may choose a difficulty (1 : EASY, 2 : MEDIUM, 3 : HARD) : ", 1, 3) - 1;
+        int lineCount = difficultySizes[difficulty][1];
+        int columnCount = difficultySizes[difficulty][0];
+
+        int mineCount = 0;
+        Grid grid = CreateGrid(columnCount, lineCount, &mineCount);
+        std::cout << mineCount << std::endl;
+
+        int emptyCellCount = lineCount * columnCount - mineCount;
+        int* pEmptyCellCount = &emptyCellCount;
+        bool isGameOver = false;
+        int column = columnCount / 2;
+        int line = lineCount / 2;
+        int tryCount = 0;
+
+        HighlightCursor(&grid, line, column);
+        DisplayGrid(columnCount, lineCount, &grid);
+        playerActions(&grid, &tryCount, &line, &column, &emptyCellCount, &isGameOver);
+
+        while (emptyCellCount != 0 && !isGameOver)
+        {
+            playerActions(&grid, &tryCount, &line, &column, &emptyCellCount, &isGameOver);
+
+            if (isGameOver)
+            {
+                RevealAllMines(&grid, &grid.array[line][column]);
+            }
+        }
+
+        if (isGameOver)
+        {
+            std::cout << "GAME OVER" << std::endl;
+        }
+        else
+        {
+            std::cout << "CONGRATULATION, YOU WON !!" << std::endl;
+        }
+
+        char retry = getPlayerInputLettre("Would you like to play again ? (Y : yes, N : no) : ", 'Y', 'N');
+        if (retry == 'N' || retry == 'n')
+        {
+            wantsToPlayAgain = false;
+        }
+
     }
 }
 
