@@ -15,6 +15,42 @@
 #define LIGHTBLUE 9
 #define LIGHTGREEN 10
 
+const char* gameOverTxt[8] =
+{
+    "+----------------------------------------------------------------------+",
+    "|  _______ _______ _______ _______    _______ _     _ _______ ______   |",
+    "| (_______|_______|_______|_______)  (_______|_)   (_|_______|_____ \\  |",
+    "|  _   ___ _______ _  _  _ _____      _     _ _     _ _____   _____) ) |",
+    "| | | (_  |  ___  | ||_|| |  ___)    | |   | | |   | |  ___) |  __  /  |",
+    "| | |___) | |   | | |   | | |_____   | |___| |\\ \\ / /| |_____| |  \\ \\  |",
+    "|  \\_____/|_|   |_|_|   |_|_______)   \\_____/  \\___/ |_______)_|   |_| |",
+    "+----------------------------------------------------------------------+"
+};
+
+const char* youWonTxt[8] =
+{
+    "+------------------------------------------------------+",
+    "|  _     _ _______ _     _    _  _  _ _______ _______  |",
+    "| | |   | (_______|_)   (_)  (_)(_)(_|_______|_______) |",
+    "| | |___| |_     _ _     _    _  _  _ _     _ _     _  |",
+    "| |_____  | |   | | |   | |  | || || | |   | | |   | | |",
+    "|  _____| | |___| | |___| |  | || || | |___| | |   | | |",
+    "| (_______|\\_____/ \\_____/    \\_____/ \\_____/|_|   |_| |",
+    "+------------------------------------------------------+"
+};
+
+const char* mineSweeperTxt[8] =
+{
+"+------------------------------------------------------------------------------------+",
+"|  _______ _ _______ _______  ______ _  _  _ _______ _______ ______ _______ ______   |",
+"| (_______) (_______|_______)/ _____|_)(_)(_|_______|_______|_____ (_______|_____ \\  |",
+"|  _  _  _| |_     _ _____  ( (____  _  _  _ _____   _____   _____) )____   _____) ) |",
+"| | ||_|| | | |   | |  ___)  \\____ \\| || || |  ___) |  ___) |  ____/  ___) |  __  /  |",
+"| | |   | | | |   | | |______ ____) ) || || | |_____| |_____| |    | |_____| |  \\ \\  |",
+"| |_|   |_|_|_|   |_| _______|_____/ \\_____/|_______)_______)_|    |_______)_|   |_| |",
+"+------------------------------------------------------------------------------------+"
+};
+
 struct Square {
     int x;
     int y;
@@ -35,13 +71,13 @@ struct Grid
 
 char getPlayerInputLettre(const char* str, const char c1, const char c2)
 {
-    //Problème avec different type rentré
     char input = ' ';
     bool isCorrectChar = ((int)input != (int)(c1) && (int)input != (int)(c1)+32 && (int)input != (int)(c2) && (int)input != (int)(c2)+32);
     std::cout << str;
     std::cin >> input;
 
     while (!isCorrectChar || std::cin.peek() != '\n')
+    // Si l'entrée contient plus d'un char ou il n'est parmis les choix indiqués
     {
         std::cin.clear();
         std::cin.ignore(10000, '\n');
@@ -51,7 +87,6 @@ char getPlayerInputLettre(const char* str, const char c1, const char c2)
         std::cin >> input;
     }
     
-
     return input;
 }
 
@@ -61,8 +96,10 @@ int getPlayerInputInt(const char* str, int i1, int i2)
     std::cout << str;
     std::cin >> input;
     while (input < i1 || input > i2)
+    //  Si l'entrée n'est pas parmis les choix indiqué 
     {
-        if (std::cin.fail() )
+        if (std::cin.fail())
+        // Si l'entrée n'est pas un entier
         {
             std::cin.clear();
             std::cin.ignore(10000, '\n');
@@ -82,14 +119,14 @@ Grid CreateGrid(int sizeX, int sizeY, int* mineCount)
         grid[i] = (Square*)malloc(sizeX * sizeof(Square));
     }
 
-    int maxMine = ((sizeX * sizeY) * 16) / 100;
+    int maxMine = ((sizeX * sizeY) * 17) / 100;
 
     for (int j = 0; j < sizeY; j++)
     {
         for (int i = 0; i < sizeX; i++)
         {
             int randomNum = rand() % 100;
-            if (randomNum <= 12 && *mineCount < maxMine)
+            if (randomNum <= 15 && *mineCount < maxMine)
             {
                 grid[j][i] = { i, j, true, false, false, 'X', CYAN, false }; 
                 *mineCount = *mineCount + 1;
@@ -176,21 +213,23 @@ void DisplayGrid(int sizeX, int sizeY, Grid* grid, int column, int line, int dif
 {
     system("cls");
 
+    // Ligne des coordonnées X 
     std::cout << "      ";
+    SetColor(LIGHTBLUE, BLACK);
     for (int i = 0; i < sizeX; i++)
     {
-        SetColor(LIGHTBLUE, BLACK);
         if (i < 10)
             std::cout << i << "   ";
         else
             std::cout << i << "  ";
-        ResetColor();
     }
+    ResetColor();
     std::cout << std::endl;
     DisplayLine(sizeX);
 
     for (int i = 0; i < sizeY; i++)
     {
+        //  Ligne des Coordonnées Y
         SetColor(LIGHTGREEN, BLACK);
         if (i < 10)
             std::cout << "  " << i << " ";
@@ -219,6 +258,18 @@ void DisplayGrid(int sizeX, int sizeY, Grid* grid, int column, int line, int dif
         DisplayLine(sizeX);
     }
     DisplayCoord(column, line, difficulty);
+}
+
+void DisplayAsciiArt(const char** text, int length, int height)
+{
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < length; j++)
+        {
+            std::cout << text[i][j];
+        }
+        std::cout << std::endl;
+    }
 }
 
 void HighlightCursor(Grid* grid, int line, int column)
@@ -278,40 +329,34 @@ int GetAdjacentMinesCount(Grid* grid, Square* square)
     return count;
 }
 
-void RevealSquare(Grid* grid, Square* square, int* ptr)
+void RevealSquare(Grid* grid, Square* square, int* emptyCellCount)
 {
     if (!square->isMine)
     {
-        if (square->isRevealed)
-        {
-            std::cout << "This CELL is already REVEALED" << std::endl;
-        }
-
-        else if (!square->isMarked)
+        if (!square->isMarked and !square->isRevealed)
         {
             square->isRevealed = true;
 
             int mineCount = GetAdjacentMinesCount(grid, square);
             if (mineCount > 0)
             {
+                // La cellule devient vide
                 square->display = (char)(mineCount + 48);
                 square->isRevealed = true;
-                *ptr = *ptr - 1;
+                *emptyCellCount = *emptyCellCount - 1;
             }
             else
             {
-                *ptr = *ptr - 1;
+                *emptyCellCount = *emptyCellCount - 1;
                 square->display = ' ';
                 for (int j = square->y - 1; j <= square->y + 1; j++)
                 {
                     for (int i = square->x - 1; i <= square->x + 1; i++)
                     {
-                        if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY)
+                        if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY && !grid->array[j][i].isRevealed && !grid->array[j][i].isMarked)
                         {
-                            if (!grid->array[j][i].isRevealed && !grid->array[j][i].isMarked)
-                            {
-                                RevealSquare(grid, &grid->array[j][i], ptr);
-                            }
+                            // Appel récursif
+                            RevealSquare(grid, &grid->array[j][i], emptyCellCount);
                         }
                     }
                 }
@@ -323,7 +368,7 @@ void RevealSquare(Grid* grid, Square* square, int* ptr)
             if (answer == 'Y' || answer == 'y')
             {
                 square->isMarked = false;
-                RevealSquare(grid, square, ptr);
+                RevealSquare(grid, square, emptyCellCount);
             }
         }
     }
@@ -338,13 +383,12 @@ void MarkSquare(Square* square)
 
 bool IsMine(Square* square)
 {
-    if (square->isMine)
-        return true;
-    return false;
+    return square->isMine;
 }
 
 void RevealAllMines(Grid* grid, Square* square, int difficulty)
 {
+    // On révèle la mine selectionnée par le joueur en premier
     square->display = 'O';
     square->color = RED;
     square->isRevealed = true;
@@ -355,10 +399,9 @@ void RevealAllMines(Grid* grid, Square* square, int difficulty)
     {
         for (int i = 0; i < grid->sizeX; i++)
         {
-
             if (grid->array[j][i].isMine && !grid->array[j][i].isRevealed)
             {
-                Sleep(500);
+                Sleep(500); // Délai de 0.5s
                 grid->array[j][i].display = 'O';
                 grid->array[j][i].color = RED;
                 grid->array[j][i].isRevealed = true;
@@ -371,6 +414,7 @@ void RevealAllMines(Grid* grid, Square* square, int difficulty)
 
 void SafeStart(Grid* grid, Square* square, int* emptyCellCount)
 {
+    // On remplace la case selectionné ainsi que ses cases adjacentes par des case vides
     for (int j = square->y - 1; j <= square->y + 1; j++)
     {
         for (int i = square->x - 1; i <= square->x + 1; i++)
@@ -382,7 +426,7 @@ void SafeStart(Grid* grid, Square* square, int* emptyCellCount)
                     *emptyCellCount = *emptyCellCount + 1;
                 }
                 grid->array[j][i].isMine = false;
-                grid->array[j][i].color = WHITE;
+                grid->array[j][i].color = CYAN;
             }
         }
     }
@@ -392,9 +436,11 @@ void playerActions(Grid* grid, int* tryCount, int* line, int* column, int* empty
 {
     char ch[3] = { 0, 0 };
 
+    // On récupère l'entrée du joueur
     ch[0] = _getch();
 
     if ((int)ch[0] == -32)
+    // Si le premier code renvoyée correspond aux touches fonctionnelles
     {
         ch[1] = _getch();
 
@@ -446,6 +492,7 @@ void playerActions(Grid* grid, int* tryCount, int* line, int* column, int* empty
         case 82:
             // R
             if (*tryCount == 0)
+            // Si il s'agit du premier essaie du joueur
             {
                 SafeStart(grid, &grid->array[*line][*column], emptyCellCount);
                 RevealSquare(grid, &grid->array[*line][*column], emptyCellCount);
@@ -481,9 +528,18 @@ int main()
 
     bool wantsToPlayAgain = true;
 
+    DisplayAsciiArt(mineSweeperTxt, 87, 8);
+    for (int i = 0; i < 10; i++)
+    {
+        std::cout << std::endl;
+    }
+    std::cout << "                              PRESS ANY KEY TO  START";
+    _getch();
+
     while (wantsToPlayAgain)
     {
-        int difficulty = getPlayerInputInt("You may choose a difficulty (1 : EASY, 2 : MEDIUM, 3 : HARD) : ", 1, 3) - 1;
+        system("cls");
+        int difficulty = getPlayerInputInt(" You may choose a difficulty (1 : EASY, 2 : MEDIUM, 3 : HARD) : ", 1, 3) - 1;
         int lineCount = difficultySizes[difficulty][1];
         int columnCount = difficultySizes[difficulty][0];
 
@@ -514,14 +570,25 @@ int main()
 
         if (isGameOver)
         {
-            std::cout << "GAME OVER" << std::endl;
+            system("cls");
+            SetColor(RED, BLACK);
+            DisplayAsciiArt(gameOverTxt, 73, 8);
+            ResetColor();
         }
         else
         {
-            std::cout << "CONGRATULATION, YOU WON !!" << std::endl;
+            system("cls");
+            SetColor(GREEN, BLACK);
+            DisplayAsciiArt(youWonTxt, 57, 8);
+            ResetColor();
         }
 
-        char retry = getPlayerInputLettre("Would you like to play again ? (Y : yes, N : no) : ", 'Y', 'N');
+        for (int i = 0; i < 10; i++)
+        {
+            std::cout << std::endl;
+        }
+
+        char retry = getPlayerInputLettre(" Would you like to play again ? (Y : yes, N : no) : ", 'Y', 'N');
         if (retry == 'N' || retry == 'n')
         {
             wantsToPlayAgain = false;
