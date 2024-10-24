@@ -329,47 +329,52 @@ int GetAdjacentMinesCount(Grid* grid, Square* square)
     return count;
 }
 
-void RevealSquare(Grid* grid, Square* square, int* emptyCellCount)
+void RevealSquare(Grid* grid, Square* square, int* emptyCellCount, bool* isGameOver)
 {
-    if (!square->isMine)
+    if (!square->isMarked && !square->isRevealed && !square->isMine)
     {
-        if (!square->isMarked and !square->isRevealed)
-        {
-            square->isRevealed = true;
+        square->isRevealed = true;
 
-            int mineCount = GetAdjacentMinesCount(grid, square);
-            if (mineCount > 0)
+        int mineCount = GetAdjacentMinesCount(grid, square);
+        if (mineCount > 0)
+        {
+            // La cellule devient vide
+            square->display = (char)(mineCount + 48);
+            square->isRevealed = true;
+            *emptyCellCount = *emptyCellCount - 1;
+        }
+        else
+        {
+            *emptyCellCount = *emptyCellCount - 1;
+            square->display = ' ';
+            for (int j = square->y - 1; j <= square->y + 1; j++)
             {
-                // La cellule devient vide
-                square->display = (char)(mineCount + 48);
-                square->isRevealed = true;
-                *emptyCellCount = *emptyCellCount - 1;
-            }
-            else
-            {
-                *emptyCellCount = *emptyCellCount - 1;
-                square->display = ' ';
-                for (int j = square->y - 1; j <= square->y + 1; j++)
+                for (int i = square->x - 1; i <= square->x + 1; i++)
                 {
-                    for (int i = square->x - 1; i <= square->x + 1; i++)
+                    if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY && !grid->array[j][i].isRevealed && !grid->array[j][i].isMarked)
                     {
-                        if (0 <= i && i < grid->sizeX && 0 <= j && j < grid->sizeY && !grid->array[j][i].isRevealed && !grid->array[j][i].isMarked)
-                        {
-                            // Appel récursif
-                            RevealSquare(grid, &grid->array[j][i], emptyCellCount);
-                        }
+                        // Appel récursif
+                        RevealSquare(grid, &grid->array[j][i], emptyCellCount, isGameOver);
                     }
                 }
             }
         }
-        else
+    }
+    else if (square->isMine)
+    {
+        *isGameOver = true;
+    }
+    else if (square->isMarked)
+    {
+        char answer = getPlayerInputLettre("CAREFULL, this cell is marked, are you sure you want to reveal it ? (Y : yes, N : no) : ", 'Y', 'N');
+        if (answer == 'Y' || answer == 'y')
         {
-            char answer = getPlayerInputLettre("CAREFULL, this cell is marked, are you sure you want to reveal it ? (Y : yes, N : no) : ", 'Y', 'N');
-            if (answer == 'Y' || answer == 'y')
+            if (square->isMine)
             {
-                square->isMarked = false;
-                RevealSquare(grid, square, emptyCellCount);
+                *isGameOver = true;
             }
+            square->isMarked = false;
+            RevealSquare(grid, square, emptyCellCount, isGameOver);
         }
     }
 }
@@ -495,18 +500,11 @@ void playerActions(Grid* grid, int* tryCount, int* line, int* column, int* empty
             // Si il s'agit du premier essaie du joueur
             {
                 SafeStart(grid, &grid->array[*line][*column], emptyCellCount);
-                RevealSquare(grid, &grid->array[*line][*column], emptyCellCount);
+                RevealSquare(grid, &grid->array[*line][*column], emptyCellCount, isGameOver);
             }
             else
             {
-                if (!grid->array[*line][*column].isMine)
-                {
-                    RevealSquare(grid, &grid->array[*line][*column], emptyCellCount);
-                }
-                else
-                {
-                    *isGameOver = true;
-                }
+                RevealSquare(grid, &grid->array[*line][*column], emptyCellCount, isGameOver);
             }
             *tryCount = *tryCount + 1;
             break;
@@ -561,7 +559,6 @@ int main()
         while (emptyCellCount != 0 && !isGameOver)
         {
             playerActions(&grid, &tryCount, &line, &column, &emptyCellCount, &isGameOver, difficulty);
-
             if (isGameOver)
             {
                 RevealAllMines(&grid, &grid.array[line][column], difficulty);
