@@ -360,10 +360,6 @@ void RevealSquare(Grid* grid, Square* square, int* emptyCellCount, bool* isGameO
             }
         }
     }
-    else if (square->isMine)
-    {
-        *isGameOver = true;
-    }
     else if (square->isMarked)
     {
         char answer = getPlayerInputLettre("CAREFULL, this cell is marked, are you sure you want to reveal it ? (Y : yes, N : no) : ", 'Y', 'N');
@@ -376,6 +372,10 @@ void RevealSquare(Grid* grid, Square* square, int* emptyCellCount, bool* isGameO
             square->isMarked = false;
             RevealSquare(grid, square, emptyCellCount, isGameOver);
         }
+    }
+    else if (square->isMine)
+    {
+        *isGameOver = true;
     }
 }
 
